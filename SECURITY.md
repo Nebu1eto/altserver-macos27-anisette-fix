@@ -32,17 +32,23 @@ credentials, anisette headers, or `RemoteAnisetteUser.json` in public issues.
 The default V3 service is SideStore's `ani.sidestore.zip`. If you do not trust
 that operator, change `serverURL` in the source to a self-hosted anisette V3
 service and rebuild the helper, or set `ALTSERVER_ANISETTE_SERVER_URL` when
-running it directly.
+running it directly. The configured endpoint must use HTTPS without URL
+userinfo; provisioning uses WSS. Redirects are accepted only when the secure
+scheme, host, and effective port remain unchanged. HTTP responses and
+WebSocket messages are capped at 1 MiB.
 
 ## Code injection
 
 `DYLD_INSERT_LIBRARIES` is fixed to a relative path that loads only
 `AltServerAnisetteFix.dylib` from inside the AltServer application bundle. The
 installer requires the complete bundle to pass code-signature verification.
+At runtime the dylib additionally checks the helper's embedded SHA-256 and
+strict Security signature, copies it to an owner-private immutable temporary
+path, and enforces a 15-second child timeout with 1 MiB stdout/stderr caps.
 
 ## Limitations
 
-- The distributed build is not notarized by Apple.
+- The prepared candidate is not notarized by Apple.
 - A macOS or AltServer update may change the internal API and break the fix.
 - Header generation will fail while the configured public V3 service is
   unavailable.

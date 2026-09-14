@@ -4,9 +4,18 @@ import Foundation
 struct AltServerAnisetteHelper {
     static func main() async throws {
         let fileManager = FileManager.default
-        let serverURL = ProcessInfo.processInfo.environment[
+        let serverURL: URL
+        if let configuredServerURL = ProcessInfo.processInfo.environment[
             "ALTSERVER_ANISETTE_SERVER_URL"
-        ].flatMap(URL.init(string:)) ?? URL(string: "https://ani.sidestore.zip")!
+        ] {
+            guard let parsedServerURL = URL(string: configuredServerURL),
+                  AnisetteURLPolicy.isValidServerURL(parsedServerURL) else {
+                throw AnisetteV3Client.ClientError.invalidResponse("server URL")
+            }
+            serverURL = parsedServerURL
+        } else {
+            serverURL = URL(string: "https://ani.sidestore.zip")!
+        }
         let supportURL = fileManager.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -50,7 +59,7 @@ struct AltServerAnisetteHelper {
 
     private static func withRetries<T>(
         attempts: Int = 3,
-        operation: () async throws -> T
+        operation: @Sendable () async throws -> T
     ) async throws -> T {
         precondition(attempts > 0)
 
