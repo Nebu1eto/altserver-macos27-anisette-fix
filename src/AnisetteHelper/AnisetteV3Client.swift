@@ -67,6 +67,28 @@ private enum AnisetteResponseLimits {
     static let maxWebSocketMessageBytes = 1_048_576
 }
 
+private enum AnisetteSessionConfiguration {
+    static func isolated(
+        basedOn baseConfiguration: URLSessionConfiguration? = nil
+    ) -> URLSessionConfiguration {
+        let configuration: URLSessionConfiguration
+        if let baseConfiguration,
+           let copiedConfiguration = baseConfiguration.copy() as? URLSessionConfiguration {
+            configuration = copiedConfiguration
+        } else {
+            configuration = .ephemeral
+        }
+        configuration.httpShouldSetCookies = false
+        configuration.httpCookieAcceptPolicy = .never
+        configuration.httpCookieStorage = nil
+        configuration.httpAdditionalHeaders = [:]
+        configuration.urlCredentialStorage = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.urlCache = nil
+        return configuration
+    }
+}
+
 private final class RedirectValidationDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let expectedURL: URL
 
@@ -307,8 +329,11 @@ struct AnisetteV3Client: Sendable {
 
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
-        self.session = session
+    init(session: URLSession? = nil) {
+        let configuration = AnisetteSessionConfiguration.isolated(
+            basedOn: session?.configuration
+        )
+        self.session = URLSession(configuration: configuration)
     }
 
     func provision(_ savedIdentity: AnisetteV3Identity) async throws -> AnisetteV3Identity {
@@ -334,7 +359,9 @@ struct AnisetteV3Client: Sendable {
         request.setValue(identity.clientInfo, forHTTPHeaderField: "X-Mme-Client-Info")
         let webSocketDelegate = RedirectValidationDelegate(expectedURL: webSocketURL)
         let webSocketSession = URLSession(
-            configuration: session.configuration,
+            configuration: AnisetteSessionConfiguration.isolated(
+                basedOn: session.configuration
+            ),
             delegate: webSocketDelegate,
             delegateQueue: nil
         )

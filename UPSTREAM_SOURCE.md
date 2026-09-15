@@ -1,14 +1,15 @@
-# Upstream Source
+# Upstream Source and Provenance
 
-This repository contains the local v3.7 helper/dylib patch source, upstream
-references, and reproducibility checksums. The prepared v1.0.8/v3.7 release
-candidate is based on official AltServer 1.7.6/build 94; GitHub publication is
-pending. The repository does not redistribute the official AltServer.app, an
-official binary as source, provisioning profiles, Apple credentials,
-certificates, or device identities. Obtain the official input independently and
-verify it before building.
+v1.0.8 / v3.7 is a source-only publication and follows v1.0.2. This repository
+contains the local helper/dylib source, transaction/build scripts, references,
+and documentation. It does not publish or redistribute a modified
+`AltServer.app`, installer or app-bearing ZIP, IPA, provisioning profile,
+certificate, or other binary asset. The official AltServer input must be
+obtained and verified independently before a local build.
 
-## Verified official input (2026-09-12)
+## Official AltServer input
+
+The authoritative public references for the input are:
 
 - Product: AltServer 1.7.6, build 94
 - Sparkle feed: <https://altstore.io/altserver/sparkle-macos.xml>
@@ -20,118 +21,117 @@ verify it before building.
 - TeamIdentifier: `6XVY5G3U44`
 - Main executable SHA-256:
   `d1e4188b67adbd120af597ffa11708a18cb139db9919baa5be806a129a3cf819`
-- Input attestation: Developer ID signature, recursive strict verification,
-  Gatekeeper assessment, and notarization ticket are required by
-  `scripts/build_release.sh`.
 
-The official 1.7.6 Sparkle release separately includes HTTP 503/modern AuthKit
-handling and the AltXPC fallback, but [AltStore issue #1751](https://github.com/altstoreio/AltStore/issues/1751)
-remains open with a 1.7.6 macOS 27 `machineID` failure report. This is why the
-local v3.7 fallback exists; it does not claim that upstream machineID behavior
-is fixed.
+`scripts/build_release.sh` requires the official Developer ID signature,
+recursive strict signature verification, Gatekeeper assessment, and a valid
+notarization ticket before injection. The original input is a local build
+dependency, not a repository asset.
 
-## Upstream references
+The official Sparkle release separately includes modern AuthKit client
+information, the reported HTTP 503 sign-in handling, and the AltXPC fallback.
+[AltStore issue #1751](https://github.com/altstoreio/AltStore/issues/1751) still
+has a macOS 27 `machineID` failure report for 1.7.6, which motivates this local
+fallback. These facts do not establish that upstream itself contains this
+patch.
 
-These are primary references for provenance and compatibility context, not
-additional code injected by v3.7:
+An exact public Git commit mapping the official 1.7.6/build 94 archive to its
+published binary cannot be proven from the available evidence. Do not infer or
+claim such a mapping. [PR #1790](https://github.com/altstoreio/AltStore/pull/1790)
+is closed and unmerged; [commit `c558994`](https://github.com/altstoreio/AltStore/commit/c558994501bac639780a853ffb54065cc703b770)
+is retained only as PR-head context, not as an input or dependency.
+
+## Related upstream references
+
+These links provide context or protocol references; none is injected into the
+local app:
 
 - [AltStore PR #1770](https://github.com/altstoreio/AltStore/pull/1770) —
   experimental, unmerged macOS 26+ anisette fallback.
-- [AltStore PR #1790](https://github.com/altstoreio/AltStore/pull/1790) —
-  closed and unmerged as of 2026-09-12. Commit
-  [`c558994`](https://github.com/altstoreio/AltStore/commit/c558994501bac639780a853ffb54065cc703b770)
-  is retained as PR-head context only, not as an upstream dependency.
-- [AltSign PR #54](https://github.com/rileytestut/AltSign/pull/54) and commit
-  [`e8728ae`](https://github.com/rileytestut/AltSign/commit/e8728aefab36e530f94bd8c29d751ca5d18a235e)
-  are historical context for a future official Classic update, not a v1.0.8
-  component.
+- [AltSign PR #54](https://github.com/rileytestut/AltSign/pull/54) — separate
+  historical context; no `AltSign-Dynamic` is bundled or published here.
+- [SideStore RemoteAnisette](https://github.com/SideStore/RemoteAnisette) — V3
+  protocol interoperability reference.
+- [anisette-v3-server](https://github.com/Dadoum/anisette-v3-server) — V3
+  protocol interoperability reference.
 
-The public official AltStore Classic 2.2.2 on-device transport is separate from
-the Mac patch. v1.0.8 contains no patched iPhone IPA or `AltSign-Dynamic`; an
-on-device refresh failure may require an official AltStore 2.3/update.
+The public AltStore Classic 2.2.2 on-device transport is a separate component.
+This project contains no patched iPhone IPA; an on-device refresh failure may
+require an official AltStore update.
 
-## Local patch provenance
+## Local patch pins and reference checks
 
-The build gate requires this exact Objective-C source SHA-256:
+`scripts/build_release.sh` enforces exact SHA-256 values for the three source
+inputs used to compile the helper and dylib:
 
-```text
-src/AltServerAnisetteFix.m
-cc5736fe799fd058eb5faeff530be670c9a46e0dbb2610b1879fb9b936d08af8
-```
-
-The current frozen implementation also pins the following local sources and
-transaction scripts:
-
-| input | SHA-256 |
+| enforced source | SHA-256 |
 | --- | --- |
-| `src/AnisetteHelper/AnisetteV3Client.swift` | `acdb47708045b57039fd285eee20f4adfedef20b16693ba2e33df55adaab9294` |
-| `src/AnisetteHelper/main.swift` | `3496167c1987c20f64b5bb0b7d85a18c0b5bf03a4c1ff4dba2f4acefde29d196` |
-| `scripts/build_release.sh` | `535a162bc70eace0930d6206c3a280bdf220fcb098fb636e0c726242b7bbe592` |
-| `scripts/Install.command` | `fceb29d7e6b49f851c65cdcfa60447e681db3c438151d46285e0918345f03b7f` |
-| `scripts/Restore.command` | `a74433e8df9d92b9224d04ba78f0d9ec38e8c3f2ea4df4826dcb2454296ddad6` |
+| `src/AltServerAnisetteFix.m` | `cc5736fe799fd058eb5faeff530be670c9a46e0dbb2610b1879fb9b936d08af8` |
+| `src/AnisetteHelper/AnisetteV3Client.swift` | `118c5b84d2a8d2c5e8741a7e27d521628b29b15f337f8c70684343555e177112` |
+| `src/AnisetteHelper/main.swift` | `0abfdd8ef5c3e0293d48421f6dc52cb5f2fab3dd8a120677035036dc0ee4f40e` |
 
-These are implementation/source pins, not downloadable release checksums.
+The build computes the current `scripts/build_release.sh` SHA-256 and records
+`BuildScriptSHA256=` in metadata; the validation is self-consistency against
+that computed value, not a comparison with a hardcoded expected build-script
+hash. Install.command and Restore.command hashes are not enforced by the
+build. Keep all six observed hashes as manual `shasum -a 256` reference checks:
 
-v3.7 calls the official AOSKit method first, passes through/canonicalizes only a
-complete coherent nonempty alias pair, and invokes the arm64 helper only for a
-non-dictionary, missing/empty, partial/incomplete, or conflicting alias
-response. The helper's own provisioning lookup uses the upstream GSA endpoint
+| reference input | SHA-256 | check |
+| --- | --- | --- |
+| `src/AltServerAnisetteFix.m` | `cc5736fe799fd058eb5faeff530be670c9a46e0dbb2610b1879fb9b936d08af8` | enforced by build |
+| `src/AnisetteHelper/AnisetteV3Client.swift` | `118c5b84d2a8d2c5e8741a7e27d521628b29b15f337f8c70684343555e177112` | enforced by build |
+| `src/AnisetteHelper/main.swift` | `0abfdd8ef5c3e0293d48421f6dc52cb5f2fab3dd8a120677035036dc0ee4f40e` | enforced by build |
+| `scripts/build_release.sh` | `d1614f6da9bb68e8da99933e1d23f05133e8402935b4f03be2c2572fb4f2358c` | manual `shasum -a 256`; metadata self-consistency only |
+| `scripts/Install.command` | `fceb29d7e6b49f851c65cdcfa60447e681db3c438151d46285e0918345f03b7f` | manual `shasum -a 256` |
+| `scripts/Restore.command` | `a74433e8df9d92b9224d04ba78f0d9ec38e8c3f2ea4df4826dcb2454296ddad6` | manual `shasum -a 256` |
+
+For a checkout, run `shasum -a 256` over all six paths and compare the output
+with the table. Documentation edits are not part of the source hash gate. A
+binary-affecting dirty checkout requires the explicit
+`ALTSERVER_ALLOW_DIRTY_ATTESTED_SOURCE=1` attestation and is recorded in local
+metadata.
+
+## What the local patch does
+
+The injected arm64 dylib calls the official
+`AOSUtilities.retrieveOTPHeadersForDSID:` path first. It accepts and
+canonicalizes only a complete, coherent, nonempty pair of either
+`X-Apple-MD-M`/`X-Apple-MD` or `X-Apple-I-MD-M`/`X-Apple-I-MD`. A
+non-dictionary, missing/empty, partial/incomplete, or conflicting response
+invokes the Foundation-based arm64 helper and public V3 protocol. Exact ABI
+checks guard the `ALTAnisetteData` description hooks.
+
+The helper's own Apple provisioning lookup is
 `https://gsa.apple.com/grandslam/GsService2/lookup` with
-`User-Agent: akd/1.0 CFNetwork/808.1.4`. The patched dylib contains no GSA,
-User-Agent, or AltSign hook and does not alter the official GSA/GrandSlam
-authentication path. The helper and dylib are local source; the main AltServer
-executable is not rewritten and remains universal.
+`User-Agent: akd/1.0 CFNetwork/808.1.4`. The dylib has no GSA, GrandSlam,
+User-Agent, or AltSign hook and does not alter the official authentication
+exchange. The main AltServer executable remains unchanged and universal.
 
-During development of the v1.0.8 candidate, macOS 27 testing also exposed a
-loader requirement:
-`dyld` rejects an injected dylib without a valid nonzero `LC_UUID`, reporting
-`OS_REASON_DYLD` / `missing LC_UUID load command`. The default arm64 link now
-includes a deterministic nonzero UUID; the build validates it after linking,
-after signing, and after ZIP extraction, while the helper carries a valid UUID
-as well. After temporary ZIP extraction and manifest/shape/mode/signature
-validation, the installer checks exactly one valid nonzero UUID on the injected
-dylib before dry-run success and before any write to `/Applications` or
-Application Support; temporary extraction and validation writes are expected.
-Two clean builds are byte-identical. This does not change
-the `machineID` fallback or the official GSA/GrandSlam authentication path.
+macOS 27 `dyld` requires a valid nonzero `LC_UUID`; a missing command reports
+`OS_REASON_DYLD` / `missing LC_UUID load command`. The builder derives and
+validates deterministic UUIDs for helper and dylib after linking, signing, and
+ZIP extraction. The installer checks exactly one valid nonzero UUID before dry
+run success and before writing `/Applications` or Application Support. This is
+a loader-integrity check, not a change to the `machineID` decision or GSA path.
 
-## Reproduce the payload
+## Reproduce locally
 
-Place the independently obtained, unmodified official app at
-`/Applications/AltServer.app`, then run:
+Place the independently verified official app at a local path and run from the
+repository root:
 
 ```bash
-chmod +x scripts/build_release.sh
-mkdir -p out
-./scripts/build_release.sh /Applications/AltServer.app ./out/v1.0.8
+./scripts/build_release.sh "/path/to/official/AltServer.app" "$PWD/out/v1.0.8"
 ```
 
-Do not use a pre-existing `out/v1.0.8`: until the current script completes
-successfully, that directory is stale packaging from an earlier implementation.
-Use only the newly generated and verified four-file output.
+The successful output directory contains exactly four regular files:
 
-The script rejects stale/patched inputs, checks the official signature and
-notarization before injection, strips and signs only the arm64 helper/dylib
-ad hoc, preserves the main executable's text hash, and writes exactly four
-regular files under `out/v1.0.8`: the payload ZIP, executable manifest,
-metadata, and checksums. The ZIP is extracted into a temporary directory for
-verification; the output contains no raw app or `Payload/` directory. It never builds
-or packages an iPhone IPA.
+```text
+AltServer-macOS27-v3.7.zip
+AltServer-macOS27-v3.7.executables.txt
+BUILD-METADATA.txt
+CHECKSUMS-SHA256.txt
+```
 
-The injected output is ad hoc signed and is not Developer ID signed or
-notarized. The original official app is retained by the installer as an atomic
-UTC-timestamped record
-`Backups/AltServer-<UTC>.<pid>.<rand>.backup/{AltServer.app,metadata}` and can
-be restored with `sudo ALTSERVER_INSTALL_DRY_RUN=0 ./scripts/Restore.command`.
-Actual Install and Restore are root-only; non-root dry-runs are read-only.
-Install requires a valid non-root `SUDO_USER` and uses that user's canonical
-backup root. Backup-root overrides fail closed for production/root transactions
-and for unsafe or non-canonical paths; the sole override exception is a
-canonical private `0700`, owner-owned
-`$HOME/.altserver-install-*/Backups` fixture used only for non-root dry-run
-validation. Unsupported target/path overrides also fail closed.
-Restore also validates legacy `.app` plus adjacent `.metadata` records and
-accepts an optional verified backup path argument. Install/restore share a root
-lock and route copy, rename, remove, and recovery operations through
-descriptor-bound identity checks. Both terminate only the exact executable
-path `/Applications/AltServer.app/Contents/MacOS/AltServer`.
+The ZIP is private local output for verification/installation. The repository
+publishes no copy of it and no raw app. See [BUILDING.md](BUILDING.md) for the
+exact staging layout and [INSTALLATION.md](INSTALLATION.md) for install,
+refresh, restore, and troubleshooting procedures.

@@ -18,8 +18,8 @@ OBJC_SOURCE="$SOURCE_ROOT/src/AltServerAnisetteFix.m"
 SWIFT_CLIENT_SOURCE="$SOURCE_ROOT/src/AnisetteHelper/AnisetteV3Client.swift"
 SWIFT_MAIN_SOURCE="$SOURCE_ROOT/src/AnisetteHelper/main.swift"
 EXPECTED_OBJC_SOURCE_SHA="cc5736fe799fd058eb5faeff530be670c9a46e0dbb2610b1879fb9b936d08af8"
-EXPECTED_SWIFT_CLIENT_SHA="acdb47708045b57039fd285eee20f4adfedef20b16693ba2e33df55adaab9294"
-EXPECTED_SWIFT_MAIN_SHA="3496167c1987c20f64b5bb0b7d85a18c0b5bf03a4c1ff4dba2f4acefde29d196"
+EXPECTED_SWIFT_CLIENT_SHA="118c5b84d2a8d2c5e8741a7e27d521628b29b15f337f8c70684343555e177112"
+EXPECTED_SWIFT_MAIN_SHA="0abfdd8ef5c3e0293d48421f6dc52cb5f2fab3dd8a120677035036dc0ee4f40e"
 EXPECTED_FIX_SHA="$EXPECTED_OBJC_SOURCE_SHA"
 EXPECTED_OFFICIAL_TEAM_ID="6XVY5G3U44"
 # Raw SHA-256 of the untouched universal official main executable (arm64+x86_64).
@@ -1824,9 +1824,18 @@ new_uuid[8] = (new_uuid[8] & 0x3F) | 0x80
 if not any(new_uuid):
     raise SystemExit("derived LC_UUID is all zeroes")
 data[uuid_offset:uuid_offset + 16] = new_uuid
+uuid_end = uuid_offset + 16
+if len(data) != len(original):
+    raise SystemExit("UUID patch changed file length")
 changed = [index for index, (before, after) in enumerate(zip(original, data)) if before != after]
-if changed != list(range(uuid_offset, uuid_offset + 16)):
+if any(index < uuid_offset or index >= uuid_end for index in changed):
     raise SystemExit("UUID patch changed bytes outside the existing LC_UUID payload")
+if data[:uuid_offset] != original[:uuid_offset] or data[uuid_end:] != original[uuid_end:]:
+    raise SystemExit("UUID patch changed bytes outside the existing LC_UUID payload")
+if bytes(data[uuid_offset:uuid_end]) != bytes(new_uuid):
+    raise SystemExit("UUID patch payload does not match the derived LC_UUID")
+if bytes(data[uuid_offset:uuid_end]) == old_uuid:
+    raise SystemExit("derived LC_UUID matches the existing LC_UUID")
 path.write_bytes(data)
 print(str(uuid.UUID(bytes=bytes(new_uuid))))
 PY

@@ -1,56 +1,60 @@
 # Third-Party Notices
 
-## AltStore
+v1.0.8 / v3.7 is source-only and follows v1.0.2. This repository publishes
+source, scripts, references, and documentation only. It redistributes none of
+the third-party binaries listed below: no official `AltServer.app`, installer
+archive, app-bearing payload ZIP, IPA, provisioning profile, certificate, or
+system framework is included in the publication. A local build links against
+the tools and frameworks already installed on the builder's Mac.
 
-- Project: <https://github.com/altstoreio/AltStore>
-- Official input: AltServer 1.7.6/build 94
-- Update feed: <https://altstore.io/altserver/sparkle-macos.xml>
-- License: GNU Affero General Public License v3.0
+The license descriptions below are notices for review, not legal advice or a
+claim of legal certainty. Check each upstream repository's current `LICENSE`
+and terms before redistribution.
 
-The v1.0.8/v3.7 payload is injected into an unmodified official AltServer.app
-after its Developer ID signature, Gatekeeper assessment, notarization ticket,
-and universal `arm64`/`x86_64` executable are verified. The official 1.7.6
-Sparkle release separately carries the HTTP 503 sign-in fix; this local payload
-does not attribute that fix to an injected GSA hook. The official app is not
-redistributed. The repository contains
-only local helper/dylib patch source, upstream references, and checksums.
+## Dependencies and references
 
-Upstream context, not local code hooks:
+| Component | Version or revision used | Role | License notice | Source |
+| --- | --- | --- | --- | --- |
+| AltStore / AltServer | 1.7.6, build 94 (official archive; exact public Git commit mapping is not proven) | Unmodified local build input and runtime base | AltStore repository declares GNU AGPL v3.0; verify upstream terms | <https://github.com/altstoreio/AltStore> |
+| SideStore RemoteAnisette | Protocol reference; no vendored revision | V3 interoperability reference | See upstream `LICENSE`; no license conclusion is made here | <https://github.com/SideStore/RemoteAnisette> |
+| anisette-v3-server | Protocol reference; no vendored revision | V3 interoperability reference | See upstream `LICENSE`; no license conclusion is made here | <https://github.com/Dadoum/anisette-v3-server> |
+| SideStore anisette servers | Service directory reference | Default endpoint context (`ani.sidestore.zip`) | Service terms and operator policy apply; not a bundled dependency | <https://github.com/SideStore/anisette-servers> |
+| Apple Foundation | macOS 27 SDK supplied by host | URLSession, JSON, plist, file and process APIs | Apple SDK and macOS terms | <https://developer.apple.com/documentation/foundation> |
+| Apple CryptoKit | macOS 27 SDK supplied by host | SHA-256 for local identifier derivation | Apple SDK and macOS terms | <https://developer.apple.com/documentation/cryptokit> |
+| Apple Security / Objective-C runtime / AOSKit | macOS 27 system frameworks supplied by host | Signature checks and AOSKit/ABI integration | Apple system software terms; AOSKit is private | <https://developer.apple.com/documentation/security> |
+| Swift compiler and Xcode Command Line Tools | Host-provided; not pinned by this source publication | Compile the Swift helper | Apple toolchain terms | <https://developer.apple.com/xcode/resources/> |
+| Python standard library | Host-provided Python 3 (`hashlib`, `os`, `pathlib`, `stat`, `zipfile`) | Deterministic archive, manifest, and checksum checks | Python Software Foundation License | <https://docs.python.org/3/license.html> |
+| macOS command-line utilities | Host macOS 27 (`codesign`, `spctl`, `stapler`, `xcrun`, `lipo`, `ditto`, `unzip`, `shasum`, and POSIX tools) | Build/install validation and transactions | Apple/macOS terms and each utility's system license | <https://support.apple.com/macos> |
 
-- AltStore [PR #1790](https://github.com/altstoreio/AltStore/pull/1790) is closed
-  and unmerged as of 2026-09-12. Commit
-  [`c558994`](https://github.com/altstoreio/AltStore/commit/c558994501bac639780a853ffb54065cc703b770)
-  is retained only as PR-head context, not as an upstream dependency.
-- AltSign [PR #54](https://github.com/rileytestut/AltSign/pull/54) and commit
-  [`e8728ae`](https://github.com/rileytestut/AltSign/commit/e8728aefab36e530f94bd8c29d751ca5d18a235e)
-  are separate historical context; they are not bundled as `AltSign-Dynamic`.
-- AltStore [PR #1770](https://github.com/altstoreio/AltStore/pull/1770) remains
-  an experimental, unmerged macOS 26+ anisette fallback.
+The official archive is obtained separately from
+`https://cdn.altstore.io/file/altstore/altserver/1_7_6.zip` and verified with
+SHA-256
+`ea4c47fa25abc0166bd4e9785f96f82488e6606b2e015ff046f8fceee083e6b9`. The local
+build verifies the official TeamIdentifier `6XVY5G3U44` and main executable
+SHA-256
+`d1e4188b67adbd120af597ffa11708a18cb139db9919baa5be806a129a3cf819` before
+injection. These checks do not grant permission to redistribute Apple's app or
+other third-party binaries.
 
-The v3.7 dylib does not hook GSA, User-Agent, or AltSign; the official 1.7.6
-transport remains responsible for GrandSlam and AltXPC behavior. The main app
-is kept universal, while the injected helper and dylib are arm64-only.
+## Upstream context links
+
+- [AltStore PR #1770](https://github.com/altstoreio/AltStore/pull/1770) is
+  experimental and unmerged macOS 26+ anisette fallback context.
+- [AltStore PR #1790](https://github.com/altstoreio/AltStore/pull/1790) is closed
+  and unmerged; [`c558994`](https://github.com/altstoreio/AltStore/commit/c558994501bac639780a853ffb54065cc703b770)
+  is PR-head context only, not a dependency.
+- [AltSign PR #54](https://github.com/rileytestut/AltSign/pull/54) is separate
+  historical context. No `AltSign-Dynamic` framework is bundled or published.
 
 The helper's own provisioning lookup uses
-`https://gsa.apple.com/grandslam/GsService2/lookup` with
-`User-Agent: akd/1.0 CFNetwork/808.1.4`; this does not alter the official
-GrandSlam/User-Agent authentication path. Official-input pins are TeamIdentifier
-`6XVY5G3U44`, main SHA-256
-`d1e4188b67adbd120af597ffa11708a18cb139db9919baa5be806a129a3cf819`, and
-archive SHA-256
-`ea4c47fa25abc0166bd4e9785f96f82488e6606b2e015ff046f8fceee083e6b9`. Developer
-ID and notarization are verified before injection; the output is ad hoc signed.
+`https://gsa.apple.com/grandslam/GsService2/lookup` and
+`User-Agent: akd/1.0 CFNetwork/808.1.4`. This is not a GSA/User-Agent hook in
+the dylib; the official AltServer/AltSign transport retains ownership of the
+official GrandSlam authentication path.
 
-## anisette V3 protocol references
+## Local source license
 
-- SideStore RemoteAnisette: <https://github.com/SideStore/RemoteAnisette>
-- anisette-v3-server: <https://github.com/Dadoum/anisette-v3-server>
-- SideStore server list: <https://github.com/SideStore/anisette-servers>
-
-These projects were used as protocol and interoperability references. No
-RemoteAnisette source file is included in this distribution.
-
-## Apple frameworks
-
-Foundation, CryptoKit, Objective-C runtime, AOSKit, and related macOS
-components are system libraries supplied by Apple and are not redistributed.
+The patch source and scripts in this repository are offered under the
+[GNU AGPL v3.0](LICENSE). This notice does not relicense AltStore, Apple
+software, protocol references, or any service. The project is independent and
+not affiliated with or endorsed by AltStore, SideStore, or Apple.

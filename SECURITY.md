@@ -1,54 +1,111 @@
 # Security and Privacy
 
+v1.0.8 / v3.7 is an unofficial source-only publication. The repository does
+not publish a modified app, installer or app-bearing ZIP, IPA, provisioning
+profile, certificate, or other binary asset. Build locally from a verified
+official AltServer input and review the source before use.
+
 ## Threat model
 
-This compatibility layer does not bypass Apple Account authentication. It
-only replaces the path AltServer uses to generate the device attestation
-headers required during sign-in.
+The patch addresses one macOS 27 failure: AOSKit can return no usable
+`machineID` headers. It does not bypass Apple Account authentication, alter
+Apple's signing requirements, or secure a remote anisette operator. AltServer
+and AltStore continue to perform their normal Apple authentication and device
+flows.
 
-## Stored data
+## Data that is stored
 
-`RemoteAnisetteUser.json` contains a personalized virtual-device identity and
-is stored with permission mode `0600`. The helper does not store Apple Account
-email addresses, passwords, session cookies, or two-factor authentication
-codes.
+The helper persists only a personalized V3 identity in:
 
-## Apple Account authentication
+```text
+~/Library/Application Support/AltServer/RemoteAnisetteUser.json
+```
 
-AltStore and AltServer still use Apple's normal account authentication flow.
-An installation or refresh may cause a trusted Apple device to display an
-Apple Account sign-in approval alert and a six-digit verification code.
+The file is created with permission mode `0600` and is not included in local
+build output or published by this repository. Treat it as sensitive device
+identity data. The helper does not store an Apple ID/Apple Account email, password,
+session cookie, two-factor code, or authorization header.
 
-Approve the alert only when you initiated the operation and the displayed
-account is yours. Enter the code only in the prompt shown by AltStore or
-AltServer. The compatibility helper does not receive the code or send it to
-the anisette V3 service.
+The identity is opened relative to an owner-checked support-directory descriptor.
+The `AltServer` support directory is owner-owned and mode `0700`; the identity
+entry must be an owner-owned regular file with exactly mode `0600` and one hard
+link. The identity open uses no-follow and nonblocking flags, so symlinks, FIFOs,
+and other non-regular entries are rejected; reads are bounded to 64 KiB and the
+file identity is checked again after reading. New identities use a unique `0600`
+exclusive temporary file, `fsync`, and exclusive publication, so concurrent
+provisioning cannot replace an existing entry. If an existing identity fails
+these checks, it is rejected rather than reused; after reviewing or quarantining
+that file, a fresh provisioning run may be required.
 
-Do not post verification codes, screenshots containing codes, Apple Account
-credentials, anisette headers, or `RemoteAnisetteUser.json` in public issues.
+## Apple Account prompts
 
-## Network trust
+An install or refresh can trigger Apple's normal **Apple Account Sign-In
+Requested** alert and a six-digit verification code. Approve only an alert you
+initiated when the displayed account is yours. Enter the code only in the
+AltStore or AltServer prompt. Choose **Don't Allow** for an unsolicited alert.
+The compatibility helper never receives or sends that code to an anisette
+service.
 
-The default V3 service is SideStore's `ani.sidestore.zip`. If you do not trust
-that operator, change `serverURL` in the source to a self-hosted anisette V3
-service and rebuild the helper, or set `ALTSERVER_ANISETTE_SERVER_URL` when
-running it directly. The configured endpoint must use HTTPS without URL
-userinfo; provisioning uses WSS. Redirects are accepted only when the secure
-scheme, host, and effective port remain unchanged. HTTP responses and
-WebSocket messages are capped at 1 MiB.
+Never put Apple Account credentials, two-factor codes, screenshots containing
+codes, anisette headers, or `RemoteAnisetteUser.json` in an issue, chat, or
+support log.
 
-## Code injection
+## Network boundary
 
-`DYLD_INSERT_LIBRARIES` is fixed to a relative path that loads only
-`AltServerAnisetteFix.dylib` from inside the AltServer application bundle. The
-installer requires the complete bundle to pass code-signature verification.
-At runtime the dylib additionally checks the helper's embedded SHA-256 and
-strict Security signature, copies it to an owner-private immutable temporary
-path, and enforces a 15-second child timeout with 1 MiB stdout/stderr caps.
+The helper contacts:
+
+- `https://gsa.apple.com/grandslam/GsService2/lookup` for Apple provisioning
+  URLs, with `User-Agent: akd/1.0 CFNetwork/808.1.4`.
+- The configured V3 server, default `https://ani.sidestore.zip`, for
+  `/v3/provisioning_session` over WSS and `/v3/get_headers` over HTTPS.
+
+The GSA lookup belongs to the helper's provisioning flow. The injected dylib
+does not hook or rewrite the official GSA/GrandSlam/User-Agent/AltSign
+authentication path.
+
+The helper uses a dedicated URLSession configuration. It is ephemeral, disables
+cookie creation and acceptance, removes cookie storage, disables URL
+credential storage, clears inherited additional headers, and disables the URL
+cache. HTTPS and WSS URLs must have a host, use no userinfo, and remain on the
+same secure scheme, host, and effective port across redirects. HTTP responses
+and WebSocket messages are capped at 1 MiB; transient operations retry up to
+three times.
+
+A remote V3 operator can process the personalized identity and anisette
+headers required by the protocol. Use only a service you trust, or change the
+source and rebuild for a service you operate. HTTPS/WSS transport does not make
+an untrusted operator trustworthy.
+
+## Code-injection and transaction checks
+
+`DYLD_INSERT_LIBRARIES` is set to the relative in-bundle path
+`@executable_path/../Frameworks/AltServerAnisetteFix.dylib`. Before launching
+the helper, the dylib verifies its embedded SHA-256 and strict Security
+signature, copies it to an owner-private immutable temporary path without
+following links, and runs it with `fork`/`execve`. It caps stdout and stderr at
+1 MiB each (2 MiB total) and enforces a 15-second deadline.
+
+The installer validates the payload ZIP, manifest, metadata, checksums, bundle
+metadata, architecture, symlinks, executable modes, recursive signature, and
+exactly one valid nonzero `LC_UUID` on helper and dylib before dry-run success
+or any write to `/Applications` or Application Support. Install and Restore
+are root-only for real transactions, use descriptor-bound identity checks and a
+shared root lock, and target only `/Applications/AltServer.app`.
+
+## Reporting safely
+
+When reporting a problem, include only a short redacted error, architecture,
+macOS major version, AltServer version/build, and the failed step. Remove or
+redact Apple Account data, device names/serials/UDIDs, local usernames and home
+paths, backup names, anisette headers/tokens, identity files, IP/location data,
+and identifying timestamps. Do not upload an unredacted log, screenshot, or
+account prompt.
 
 ## Limitations
 
-- The prepared candidate is not notarized by Apple.
-- A macOS or AltServer update may change the internal API and break the fix.
-- Header generation will fail while the configured public V3 service is
-  unavailable.
+- The output is ad hoc signed and not notarized by Apple.
+- A macOS or AltServer update can change private framework behavior.
+- Availability and behavior of the configured V3 service are outside this
+  repository's control.
+- The patch covers the Mac-side `machineID` path only; on-device transport and
+  later AltStore refresh failures may require an official update.
