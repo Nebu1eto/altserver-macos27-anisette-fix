@@ -818,9 +818,18 @@ static BOOL ALTPreparePrivateHelperCopy(int sourceFD,
     *helperFDOut = -1;
 
     NSString *temporaryDirectory = NSTemporaryDirectory();
-    const char *temporaryPath = temporaryDirectory.fileSystemRepresentation;
-    if (temporaryPath == NULL ||
-        snprintf(directoryPath,
+    const char *rawTemporaryPath = temporaryDirectory.fileSystemRepresentation;
+    char temporaryPathBuffer[PATH_MAX] = { 0 };
+    if (rawTemporaryPath == NULL ||
+        realpath(rawTemporaryPath, temporaryPathBuffer) == NULL)
+    {
+        return NO;
+    }
+    // TMPDIR (/var/folders/...) traverses the /var -> /private/var symlink and
+    // every open below uses O_NOFOLLOW_ANY, which fails with ELOOP on a
+    // path that still contains symlinks.  Use the canonical path.
+    const char *temporaryPath = temporaryPathBuffer;
+    if (snprintf(directoryPath,
                  directoryCapacity,
                  "%s/.altserver-anisette-helper.XXXXXX",
                  temporaryPath) < 0 ||
@@ -1069,11 +1078,27 @@ static NSDictionary *ALTRequestRemoteAnisetteHeadersUncoalesced(void)
 {
     ALTInstallAnisetteDataHooks();
 
+    // Diagnostics only: enabled by ALTSERVER_ANISETTE_FIX_DEBUG_LOG at runtime.
+#define ALTDebugHelperRun(marker, ...) do { \
+        const char *dbgPath = getenv("ALTSERVER_ANISETTE_FIX_DEBUG_LOG"); \
+        if (dbgPath != NULL && dbgPath[0] != '\0') { \
+            int dbgFD = open(dbgPath, O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0600); \
+            if (dbgFD >= 0) { \
+                char dbgLine[512]; \
+                int dbgLen = snprintf(dbgLine, sizeof(dbgLine), \
+                    "anisette-helper " marker "\n", ## __VA_ARGS__); \
+                (void)!write(dbgFD, dbgLine, (size_t)dbgLen); \
+                close(dbgFD); \
+            } \
+        } \
+    } while (0)
+
     NSURL *helperURL = ALTAnisetteHelperURL();
     NSString *helperPathObject = helperURL.path;
     const char *helperPath = helperPathObject.fileSystemRepresentation;
     if (helperURL == nil || helperPath == NULL || helperPathObject.length == 0)
     {
+        ALTDebugHelperRun("tag=helper-url-missing");
         return nil;
     }
 
@@ -1081,12 +1106,14 @@ static NSDictionary *ALTRequestRemoteAnisetteHeadersUncoalesced(void)
                         O_RDONLY | O_CLOEXEC | O_NOFOLLOW_ANY | O_UNIQUE);
     if (sourceFD < 0)
     {
+        ALTDebugHelperRun("tag=helper-open errno=%d", errno);
         return nil;
     }
 
     ALTAnisetteHelperSnapshot sourceSnapshot;
     if (!ALTValidateAnisetteHelperFD(sourceFD, helperPathObject, &sourceSnapshot))
     {
+        ALTDebugHelperRun("tag=helper-validate errno=%d", errno);
         close(sourceFD);
         return nil;
     }
@@ -1103,6 +1130,7 @@ static NSDictionary *ALTRequestRemoteAnisetteHeadersUncoalesced(void)
                                      &privateDirectoryFD,
                                      &privateHelperFD))
     {
+        ALTDebugHelperRun("tag=helper-copy errno=%d", errno);
         close(sourceFD);
         return nil;
     }
@@ -1193,6 +1221,13 @@ static NSDictionary *ALTRequestRemoteAnisetteHeadersUncoalesced(void)
         if (errorPipe[1] > STDERR_FILENO) close(errorPipe[1]);
         if (privateDirectoryFD > STDERR_FILENO) close(privateDirectoryFD);
         if (privateHelperFD > STDERR_FILENO) close(privateHelperFD);
+        // The private helper copy lives in a per-run temp directory, so an
+        // inherited DYLD_INSERT_LIBRARIES that resolves through
+        // @executable_path (the loader entry added by the patch) kills the
+        // child at dyld startup before main runs.  Scrub the dynamic linker
+        // overrides; the helper needs none of them.
+        unsetenv("DYLD_INSERT_LIBRARIES");
+        unsetenv("DYLD_PRINT_LIBRARIES");
         char *arguments[] = { (char *)"AltServerAnisetteHelper", NULL };
         execve(privateHelperPath, arguments, environ);
         _exit(127);
@@ -1269,8 +1304,16 @@ static NSDictionary *ALTRequestRemoteAnisetteHeadersUncoalesced(void)
     if (!completed || outputExceeded || !drainsComplete ||
         !WIFEXITED(waitStatus) || WEXITSTATUS(waitStatus) != 0)
     {
+        ALTDebugHelperRun("tag=helper-run pid=%d completed=%d exceeded=%d drains=%d wifexited=%d exit=%d signaled=%d sigterm=%d out=%zu helper=%s",
+                          (int)childPID, completed ? 1 : 0, outputExceeded ? 1 : 0,
+                          drainsComplete ? 1 : 0, WIFEXITED(waitStatus) ? 1 : 0,
+                          WIFEXITED(waitStatus) ? WEXITSTATUS(waitStatus) : -1,
+                          WIFSIGNALED(waitStatus) ? 1 : 0,
+                          WIFSIGNALED(waitStatus) ? WTERMSIG(waitStatus) : 0,
+                          (size_t)outputData.length, privateHelperPath);
         return nil;
     }
+#undef ALTDebugHelperRun
 
     NSData *data = [outputData copy];
     NSDictionary *response = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];

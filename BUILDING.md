@@ -55,12 +55,12 @@ downloadable binary checksums:
 
 | reference input | path | SHA-256 | check |
 | --- | --- | --- | --- |
-| Objective-C patch | `src/AltServerAnisetteFix.m` | `cc5736fe799fd058eb5faeff530be670c9a46e0dbb2610b1879fb9b936d08af8` | enforced by build |
+| Objective-C patch | `src/AltServerAnisetteFix.m` | `0848d290cd05a7edfbffc28f762f529121971834c648493ea72e8109167572de` | enforced by build |
 | Swift client | `src/AnisetteHelper/AnisetteV3Client.swift` | `118c5b84d2a8d2c5e8741a7e27d521628b29b15f337f8c70684343555e177112` | enforced by build |
 | Swift entry point | `src/AnisetteHelper/main.swift` | `0abfdd8ef5c3e0293d48421f6dc52cb5f2fab3dd8a120677035036dc0ee4f40e` | enforced by build |
-| build script | `scripts/build_release.sh` | `d1614f6da9bb68e8da99933e1d23f05133e8402935b4f03be2c2572fb4f2358c` | manual `shasum -a 256` reference; metadata self-consistency only |
-| installer | `scripts/Install.command` | `fceb29d7e6b49f851c65cdcfa60447e681db3c438151d46285e0918345f03b7f` | manual `shasum -a 256` reference |
-| restore | `scripts/Restore.command` | `a74433e8df9d92b9224d04ba78f0d9ec38e8c3f2ea4df4826dcb2454296ddad6` | manual `shasum -a 256` reference |
+| build script | `scripts/build_release.sh` | `8bd8d8fc5a09317db51a45f45e14c37dc388119a0779213cca6cedf8b115da83` | manual `shasum -a 256` reference; metadata self-consistency only |
+| installer | `scripts/Install.command` | `4fa5b0d9e8b4504794aef21f3538f3d394c4af6b2921adc2cd0dcd43d67f6497` | manual `shasum -a 256` reference |
+| restore | `scripts/Restore.command` | `33a0e31a00e429ca194e835b86426190e5a0b281404cefc981182b7d10eb53a2` | manual `shasum -a 256` reference |
 
 To check a checkout manually, run `shasum -a 256` over these six paths and
 compare the output with the table.

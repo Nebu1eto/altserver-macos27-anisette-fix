@@ -153,7 +153,7 @@ ATOMIC_HELPER=""
 INSTALL_LOCK_NAME=".AltServer-install.lock"
 INSTALL_LOCK_OWNER_START="$(date -u +%s)"
 INSTALL_LOCK_HELD=0
-INSTALL_LOCK_PARENT_REAL="/private/var/run"
+INSTALL_LOCK_PARENT_REAL="/private/var/db"
 INSTALL_LOCK_PARENT_KEY=""
 INSTALL_LOCK_KEY=""
 trap 'cleanup_install_exit' EXIT
